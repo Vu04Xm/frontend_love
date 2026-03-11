@@ -22,8 +22,7 @@ function Memories({ memories, fetchMemories, loading, user }) {
     setSelectedMem(m);
     setIsViewing(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/memories/${m.id}/photos`);
-      setAlbumPhotos(res.data);
+const res = await axios.get(`https://backend-love.onrender.com/api/memories/${m.id}/photos`);      setAlbumPhotos(res.data);
     } catch (err) { console.error("Lỗi:", err); }
   };
 

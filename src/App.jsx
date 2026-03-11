@@ -51,8 +51,10 @@ function App() {
   const fetchMemories = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/memories');
-      setMemories(res.data);
+const res = await axios.get('https://backend-love.onrender.com/api/memories');
+
+
+setMemories(res.data);
     } catch (err) {
       console.error("Lỗi fetch memories:", err);
     } finally {

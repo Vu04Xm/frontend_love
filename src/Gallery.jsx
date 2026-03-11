@@ -12,8 +12,7 @@ function Gallery({ user }) {
 
   const fetchPhotos = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/photos');
-      setPhotos(res.data);
+const res = await axios.get('https://backend-love.onrender.com/api/photos');      setPhotos(res.data);
     } catch (err) { console.error("Lỗi lấy ảnh:", err); }
   };
 
