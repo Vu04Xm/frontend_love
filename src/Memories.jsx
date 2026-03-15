@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = "http://localhost:5000/api/memories";
+import api from './api'; // 1. Sử dụng api instance thay vì axios thuần
 
 function Memories({ user }) {
   const [memories, setMemories] = useState([]);
@@ -20,10 +18,14 @@ function Memories({ user }) {
 
   const fetchMemories = async () => {
     try {
-      const res = await axios.get(API_URL);
+      // 2. Gọi api.get thay cho axios.get(link cứng)
+      const res = await api.get('/api/memories');
       setMemories(res.data);
-    } catch (err) { console.error("Lỗi lấy danh sách"); }
-    finally { setLoading(false); }
+    } catch (err) { 
+      console.error("Lỗi lấy danh sách kỷ niệm"); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleViewAlbum = async (m) => {
@@ -31,9 +33,12 @@ function Memories({ user }) {
     setIsViewing(true);
     setAlbumPhotos([]);
     try {
-      const res = await axios.get(`${API_URL}/${m.id}/photos`);
+      // 3. Sử dụng endpoint động thông qua api instance
+      const res = await api.get(`/api/memories/${m.id}/photos`);
       setAlbumPhotos(res.data);
-    } catch (err) { console.error("Lỗi lấy album ảnh"); }
+    } catch (err) { 
+      console.error("Lỗi lấy album ảnh"); 
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -48,20 +53,24 @@ function Memories({ user }) {
 
     try {
       if (editingId) {
-        await axios.put(`${API_URL}/${editingId}`, data);
+        // 4. Gọi api.put cho cập nhật
+        await api.put(`/api/memories/${editingId}`, data);
         alert("Đã cập nhật kỷ niệm! ✨");
       } else {
-        await axios.post(API_URL, data);
+        // 5. Gọi api.post cho thêm mới
+        await api.post('/api/memories', data);
         alert("Đã thêm kỷ niệm mới! ❤️");
       }
       setEditingId(null);
       setFormData({ title: '', content: '', date: '', files: [] });
       fetchMemories();
-    } catch (err) { alert("Lỗi lưu dữ liệu"); }
+    } catch (err) { 
+      alert("Lỗi lưu dữ liệu. Vui lòng kiểm tra lại kết nối."); 
+    }
   };
 
   const handleEdit = (e, m) => {
-    e.stopPropagation(); // Ngăn mở album khi bấm nút sửa
+    e.stopPropagation();
     setEditingId(m.id);
     setFormData({ 
       title: m.title, 
@@ -73,17 +82,20 @@ function Memories({ user }) {
   };
 
   const handleDelete = async (e, id) => {
-    e.stopPropagation(); // Ngăn mở album khi bấm nút xóa
+    e.stopPropagation();
     if (window.confirm("Bạn có chắc muốn xóa kỷ niệm này? 😢")) {
       try {
-        await axios.delete(`${API_URL}/${id}`);
+        // 6. Gọi api.delete
+        await api.delete(`/api/memories/${id}`);
         fetchMemories();
-      } catch (err) { alert("Lỗi khi xóa!"); }
+      } catch (err) { 
+        alert("Lỗi khi xóa!"); 
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-rose-50/30 py-12 px-4">
+    <div className="min-h-screen bg-rose-50/30 py-12 px-4 animate-fadeIn">
       <div className="max-w-6xl mx-auto">
         
         {/* HEADER */}
@@ -92,9 +104,9 @@ function Memories({ user }) {
           <p className="text-gray-500 italic">"Lưu giữ những khoảnh khắc tuyệt vời nhất"</p>
         </div>
 
-        {/* FORM ADMIN - ĐÃ LẮP LẠI ĐẦY ĐỦ */}
+        {/* FORM ADMIN */}
         {user?.role === 'admin' && (
-          <div className="mb-16 bg-white p-8 rounded-[2.5rem] shadow-xl border border-rose-100">
+          <div className="mb-16 bg-white p-8 rounded-[2.5rem] shadow-xl border border-rose-100 animate-popIn">
             <h2 className="text-2xl font-bold mb-6 text-gray-800">
               {editingId ? "✍️ Chỉnh sửa kỷ niệm" : "📸 Thêm kỷ niệm mới"}
             </h2>
@@ -112,7 +124,7 @@ function Memories({ user }) {
                 />
                 <input 
                   type="file" multiple
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:bg-rose-50 file:text-rose-600 font-semibold"
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:bg-rose-50 file:text-rose-600 font-semibold cursor-pointer"
                   onChange={e => setFormData({...formData, files: e.target.files})}
                 />
               </div>
@@ -138,55 +150,69 @@ function Memories({ user }) {
         )}
 
         {/* DANH SÁCH CARD */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {memories.map((m) => (
-            <div 
-              key={m.id} 
-              onClick={() => handleViewAlbum(m)}
-              className="group bg-white rounded-[2.5rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer relative border-4 border-white"
-            >
-              <div className="h-60 overflow-hidden">
-                <img src={m.cover_image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-              </div>
-              <div className="p-6">
-                <div className="flex justify-between items-start">
-                   <span className="text-rose-400 text-xs font-bold uppercase">{new Date(m.event_date).toLocaleDateString('vi-VN')}</span>
-                   {/* Nút Sửa/Xóa nhỏ gọn trên Card */}
-                   {user?.role === 'admin' && (
-                     <div className="flex gap-2">
-                       <button onClick={(e) => handleEdit(e, m)} className="text-teal-500 hover:text-teal-700 p-1">Sửa</button>
-                       <button onClick={(e) => handleDelete(e, m.id)} className="text-rose-400 hover:text-rose-600 p-1">Xóa</button>
-                     </div>
-                   )}
+        {loading ? (
+          <div className="text-center text-rose-300 animate-pulse font-bold">Đang tải những kỷ niệm ngọt ngào...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {memories.map((m) => (
+              <div 
+                key={m.id} 
+                onClick={() => handleViewAlbum(m)}
+                className="group bg-white rounded-[2.5rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer relative border-4 border-white"
+              >
+                <div className="h-60 overflow-hidden">
+                  <img src={m.cover_image || 'https://via.placeholder.com/400x300?text=Love'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mt-2 line-clamp-1">{m.title}</h3>
-                <p className="text-gray-400 text-sm mt-2 line-clamp-2 italic">{m.content}</p>
+                <div className="p-6">
+                  <div className="flex justify-between items-start">
+                     <span className="text-rose-400 text-xs font-bold uppercase">{new Date(m.event_date).toLocaleDateString('vi-VN')}</span>
+                     {user?.role === 'admin' && (
+                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button onClick={(e) => handleEdit(e, m)} className="text-teal-500 hover:underline text-sm font-bold">Sửa</button>
+                         <button onClick={(e) => handleDelete(e, m.id)} className="text-rose-400 hover:underline text-sm font-bold">Xóa</button>
+                       </div>
+                     )}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mt-2 line-clamp-1">{m.title}</h3>
+                  <p className="text-gray-400 text-sm mt-2 line-clamp-2 italic">{m.content}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* --- MODAL XEM ALBUM (Giữ nguyên phần lộng lẫy) --- */}
+        {/* MODAL XEM ALBUM */}
         {isViewing && selectedMem && (
-          <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto">
-            <div className="w-full max-w-5xl my-auto py-10">
-              <button onClick={() => setIsViewing(false)} className="fixed top-8 right-8 text-white text-5xl font-light hover:rotate-90 transition-all">✕</button>
-              <div className="text-center mb-12 text-white">
-                <h2 className="text-5xl font-black mb-4">{selectedMem.title}</h2>
-                <p className="text-rose-200 text-lg italic">"{selectedMem.content}"</p>
+          <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col p-4 overflow-y-auto animate-fadeIn">
+            <button onClick={() => setIsViewing(false)} className="fixed top-8 right-8 text-white text-5xl font-light hover:rotate-90 transition-all z-[110]">✕</button>
+            <div className="w-full max-w-5xl mx-auto py-10">
+              <div className="text-center mb-12 text-white animate-slideUp">
+                <h2 className="text-5xl font-black mb-4 tracking-tighter">{selectedMem.title}</h2>
+                <p className="text-rose-200 text-lg italic bg-white/10 inline-block px-6 py-2 rounded-full">"{selectedMem.content}"</p>
               </div>
               <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6 px-4">
                 {albumPhotos.map((photo) => (
-                  <div key={photo.id} className="break-inside-avoid rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/10">
-                    <img src={photo.photo_url} className="w-full h-auto hover:scale-110 transition-transform duration-500" alt="love" />
+                  <div key={photo.id} className="break-inside-avoid rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/10 animate-popIn">
+                    <img src={photo.image_url} className="w-full h-auto hover:scale-105 transition-transform duration-500" alt="love" />
                   </div>
                 ))}
               </div>
+              {albumPhotos.length === 0 && (
+                <p className="text-center text-white/50 italic mt-10">Album này hiện chưa có ảnh...</p>
+              )}
             </div>
           </div>
         )}
 
       </div>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-popIn { animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-slideUp { animation: slideUp 0.5s ease-out forwards; }
+      `}</style>
     </div>
   );
 }

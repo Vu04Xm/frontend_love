@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import axios from 'axios';
+import api from './api'; // 1. Sử dụng api instance đã cấu hình thay vì axios thuần
 
 function Login({ onLoginSuccess }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -26,9 +26,13 @@ function Login({ onLoginSuccess }) {
     const username = e.target.username.value;
     const password = e.target.password.value;
     try {
-      const res = await axios.post('http://localhost:5000/api/login', { username, password });
-      if (res.data.success) { onLoginSuccess(res.data.user); }
+      // 2. Gọi API đăng nhập thông qua instance api
+      const res = await api.post('/api/login', { username, password });
+      if (res.data.success) { 
+        onLoginSuccess(res.data.user); 
+      }
     } catch (err) {
+      // Hiển thị thông báo lỗi từ Backend hoặc thông báo mặc định
       alert(err.response?.data?.message || "Đăng nhập thất bại!");
     }
   };
@@ -41,21 +45,19 @@ function Login({ onLoginSuccess }) {
         {floatingItems.map((item) => (
           <span
             key={item.id}
-            className="animate-fall opacity-60"
+            className="absolute animate-fall opacity-60 pointer-events-none"
             style={{
               left: item.left,
               animationDuration: item.duration,
               animationDelay: item.delay,
               fontSize: item.size,
-              top: '-5%'
+              top: '-10%'
             }}
           >
             {item.content}
           </span>
         ))}
       </div>
-
-      
 
       {/* Trình phát nhạc ẩn */}
       <audio ref={audioRef} src="/motdoi.mp3" loop />
@@ -65,6 +67,7 @@ function Login({ onLoginSuccess }) {
         {/* Nút bật/tắt nhạc */}
         <button 
           onClick={toggleMusic}
+          type="button"
           className={`absolute -top-4 -right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-500 z-20 ${isPlaying ? 'bg-pink-500 animate-spin-slow' : 'bg-gray-400 rotate-12'}`}
         >
           <span className="text-2xl">{isPlaying ? '🎵' : '🔇'}</span>
@@ -83,7 +86,7 @@ function Login({ onLoginSuccess }) {
         </div>
         
         <form onSubmit={handleLogin} className="space-y-5">
-          <div className="group">
+          <div className="group text-left">
             <input 
               name="username" 
               type="text" 
@@ -93,7 +96,7 @@ function Login({ onLoginSuccess }) {
             />
           </div>
           
-          <div className="group">
+          <div className="group text-left">
             <input 
               name="password" 
               type="password" 
@@ -117,6 +120,28 @@ function Login({ onLoginSuccess }) {
           <span className="h-px w-8 bg-pink-200"></span>
         </p>
       </div>
+
+      <style>{`
+        @keyframes fall {
+          0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+          10% { opacity: 0.6; }
+          90% { opacity: 0.6; }
+          100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+        }
+        .animate-fall {
+          position: absolute;
+          animation-name: fall;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+        .animate-spin-slow {
+          animation: spin 6s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

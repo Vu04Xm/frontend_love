@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './api'; // 1. Sử dụng instance api thay vì axios thuần
 
 function Places({ user }) {
   const [places, setPlaces] = useState([]);
@@ -13,7 +13,8 @@ function Places({ user }) {
 
   const fetchPlaces = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/places');
+      // 2. Gọi api.get thay cho link localhost
+      const res = await api.get('/api/places');
       // Sắp xếp theo thời gian tăng dần cho đúng lộ trình map
       const sorted = res.data.sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
       setPlaces(sorted);
@@ -26,7 +27,8 @@ function Places({ user }) {
     setSelectedPlace(place);
     setIsViewing(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/places/${place.id}/photos`);
+      // 3. Sử dụng endpoint động
+      const res = await api.get(`/api/places/${place.id}/photos`);
       setAlbumPhotos(res.data);
     } catch (err) { console.error(err); }
   };
@@ -37,7 +39,8 @@ function Places({ user }) {
     if (!window.confirm("Hai bạn có chắc chắn muốn xóa kỷ niệm này không? Kho báu sẽ biến mất mãi mãi đó! 🏴‍☠️")) return;
     
     try {
-      await axios.delete(`http://localhost:5000/api/places/${id}`);
+      // 4. Sử dụng api.delete
+      await api.delete(`/api/places/${id}`);
       alert("Đã xóa chặng đường này!");
       fetchPlaces();
     } catch (err) {
@@ -53,8 +56,10 @@ function Places({ user }) {
     data.append('description', formData.desc);
     data.append('event_date', formData.date);
     formData.files.forEach(file => data.append('images', file));
+    
     try {
-      await axios.post('http://localhost:5000/api/places', data);
+      // 5. Sử dụng api.post
+      await api.post('/api/places', data);
       setShowForm(false);
       setFormData({ title: '', desc: '', date: '', files: [] });
       fetchPlaces();
@@ -63,7 +68,7 @@ function Places({ user }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#fffafa] pb-20">
+    <div className="min-h-screen bg-[#fffafa] pb-20 animate-fadeIn">
       <div className="py-16 text-center">
         <h2 className="text-5xl font-black text-pink-500 tracking-tighter mb-4 animate-pulse">MAP KHO BÁU ❤️</h2>
         <div className="w-24 h-1.5 bg-pink-200 mx-auto rounded-full"></div>
@@ -126,18 +131,18 @@ function Places({ user }) {
         </div>
       </div>
 
-      {/* MODAL XEM ẢNH - TONE HỒNG TRẮNG */}
+      {/* MODAL XEM ẢNH */}
       {isViewing && selectedPlace && (
         <div className="fixed inset-0 z-[2000] bg-white/95 backdrop-blur-lg overflow-y-auto animate-fadeIn">
-          <button onClick={() => setIsViewing(false)} className="fixed top-8 right-8 text-pink-500 text-4xl font-bold z-[2001]">✕</button>
+          <button onClick={() => setIsViewing(false)} className="fixed top-8 right-8 text-pink-500 text-4xl font-bold z-[2001] hover:rotate-90 transition-transform">✕</button>
           <div className="max-w-6xl mx-auto py-20 px-6">
             <div className="text-center mb-16">
               <h2 className="text-5xl font-black text-gray-800 mb-4 tracking-tighter">{selectedPlace.title}</h2>
-              <p className="text-pink-400 font-bold text-lg italic">"{selectedPlace.description}"</p>
+              <p className="text-pink-400 font-bold text-lg italic bg-pink-50 inline-block px-6 py-2 rounded-full">"{selectedPlace.description}"</p>
             </div>
             <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
               {albumPhotos.map((img) => (
-                <img key={img.id} src={img.image_url} className="w-full rounded-[2rem] border-4 border-white shadow-xl hover:scale-[1.02] transition-transform" alt="memory" />
+                <img key={img.id} src={img.image_url} className="w-full rounded-[2rem] border-4 border-white shadow-xl hover:scale-[1.02] transition-transform animate-popIn" alt="memory" />
               ))}
             </div>
           </div>
@@ -147,25 +152,34 @@ function Places({ user }) {
       {/* FORM THÊM - ADMIN */}
       {showForm && (
         <div className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleSubmit} className="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl border-8 border-pink-50">
+          <form onSubmit={handleSubmit} className="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl border-8 border-pink-50 animate-popIn">
             <h3 className="text-3xl font-black text-center mb-8 text-gray-800">CẮM MỐC TỌA ĐỘ ⚓</h3>
             <div className="space-y-4">
               <input type="text" placeholder="Địa điểm..." required className="w-full p-4 rounded-2xl bg-pink-50/50 border-2 border-pink-100 outline-none focus:border-pink-400" onChange={e => setFormData({...formData, title: e.target.value})} />
               <textarea placeholder="Ghi chú..." className="w-full p-4 rounded-2xl bg-pink-50/50 border-2 border-pink-100 outline-none" rows="3" onChange={e => setFormData({...formData, desc: e.target.value})} />
               <input type="date" required className="w-full p-4 rounded-2xl bg-pink-50/50 border-2 border-pink-100 outline-none" onChange={e => setFormData({...formData, date: e.target.value})} />
-              <label className="flex flex-col items-center justify-center p-8 bg-pink-50 rounded-3xl border-2 border-dashed border-pink-200 cursor-pointer">
+              <label className="flex flex-col items-center justify-center p-8 bg-pink-50 rounded-3xl border-2 border-dashed border-pink-200 cursor-pointer hover:bg-pink-100 transition-colors">
                 <span className="text-3xl">📸</span>
                 <span className="text-pink-600 font-bold mt-2">{formData.files.length > 0 ? `Đã chọn ${formData.files.length} ảnh` : "Chọn ảnh kỷ niệm"}</span>
                 <input type="file" multiple hidden accept="image/*" onChange={e => setFormData({...formData, files: Array.from(e.target.files)})} />
               </label>
             </div>
             <div className="mt-8 flex gap-4">
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-4 font-bold text-gray-400">Hủy</button>
-              <button type="submit" disabled={loading} className="flex-1 py-4 bg-pink-500 text-white rounded-2xl font-bold shadow-lg">LƯU TỌA ĐỘ</button>
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-4 font-bold text-gray-400 hover:text-gray-600">Hủy</button>
+              <button type="submit" disabled={loading} className="flex-1 py-4 bg-pink-500 text-white rounded-2xl font-bold shadow-lg hover:bg-pink-600 disabled:bg-gray-400 transition-all">
+                {loading ? "ĐANG LƯU..." : "LƯU TỌA ĐỘ"}
+              </button>
             </div>
           </form>
         </div>
       )}
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-popIn { animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}</style>
     </div>
   );
 }

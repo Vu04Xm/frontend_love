@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './api'; // 1. Import cấu hình api dùng chung
 
 function Gallery({ user }) {
   const [photos, setPhotos] = useState([]);
@@ -12,7 +12,8 @@ function Gallery({ user }) {
 
   const fetchPhotos = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/photos');
+      // 2. Sử dụng api.get thay cho axios.get(localhost)
+      const res = await api.get('/api/photos');
       setPhotos(res.data);
     } catch (err) { console.error("Lỗi lấy ảnh:", err); }
   };
@@ -43,7 +44,8 @@ function Gallery({ user }) {
     if (newPhoto.date) data.append('custom_date', newPhoto.date);
 
     try {
-      await axios.post('http://localhost:5000/api/photos', data);
+      // 3. Sử dụng api.post
+      await api.post('/api/photos', data);
       setShowUploadForm(false);
       setNewPhoto({ file: null, caption: '', date: '' });
       fetchPhotos();
@@ -59,7 +61,8 @@ function Gallery({ user }) {
     e.stopPropagation();
     if (!window.confirm("Bạn có chắc chắn muốn xóa kỷ niệm này vĩnh viễn không?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/photos/${id}`);
+      // 4. Sử dụng api.delete
+      await api.delete(`/api/photos/${id}`);
       fetchPhotos();
       if (currentIndex !== null) setCurrentIndex(null);
     } catch (err) { alert("Lỗi khi xóa ảnh."); }
@@ -71,7 +74,8 @@ function Gallery({ user }) {
     const newCaption = prompt("Sửa lời nhắn cho ảnh này:", photo.caption);
     if (newCaption === null || newCaption === photo.caption) return;
     try {
-      await axios.put(`http://localhost:5000/api/photos/${photo.id}`, { caption: newCaption });
+      // 5. Sử dụng api.put
+      await api.put(`/api/photos/${photo.id}`, { caption: newCaption });
       fetchPhotos();
     } catch (err) { alert("Lỗi khi cập nhật."); }
   };
@@ -150,7 +154,6 @@ function Gallery({ user }) {
           >
             <img src={p.image_url} alt="" className="w-full h-auto block transform group-hover:scale-105 transition-transform duration-700" />
             
-            {/* CÁC NÚT QUẢN LÝ CHO ADMIN TRÊN GRID */}
             {user?.role === 'admin' && (
               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <button onClick={(e) => handleEditCaption(e, p)} className="bg-white/90 p-2 rounded-full text-blue-500 hover:bg-white shadow-md">✏️</button>
@@ -182,7 +185,6 @@ function Gallery({ user }) {
               <p className="text-white text-xl md:text-2xl font-black italic tracking-tight">"{photos[currentIndex].caption}"</p>
               <p className="text-pink-300 text-xs mt-3 font-bold uppercase tracking-[0.2em]">📅 {formatDate(photos[currentIndex].created_at)}</p>
               
-              {/* NÚT SỬA TRONG MODAL DÀNH CHO ADMIN */}
               {user?.role === 'admin' && (
                 <div className="mt-4 flex justify-center gap-4">
                   <button onClick={(e) => handleEditCaption(e, photos[currentIndex])} className="text-[10px] text-blue-300 hover:text-white underline tracking-widest uppercase">Chỉnh sửa lời nhắn</button>
