@@ -26,7 +26,8 @@ function Login({ onLoginSuccess }) {
     const username = e.target.username.value;
     const password = e.target.password.value;
     try {
-const res = await axios.post('https://backend-love.onrender.com/api/login', { username, password });      if (res.data.success) { onLoginSuccess(res.data.user); }
+      const res = await axios.post('http://localhost:5000/api/login', { username, password });
+      if (res.data.success) { onLoginSuccess(res.data.user); }
     } catch (err) {
       alert(err.response?.data?.message || "Đăng nhập thất bại!");
     }
@@ -54,7 +55,7 @@ const res = await axios.post('https://backend-love.onrender.com/api/login', { us
         ))}
       </div>
 
-
+      
 
       {/* Trình phát nhạc ẩn */}
       <audio ref={audioRef} src="/motdoi.mp3" loop />

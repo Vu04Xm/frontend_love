@@ -1,175 +1,192 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-function Memories({ memories, fetchMemories, loading, user }) {
-  const [showModal, setShowModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+const API_URL = "http://localhost:5000/api/memories";
 
-  // States xem album chi tiết
+function Memories({ user }) {
+  const [memories, setMemories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // States cho Modal Album
   const [selectedMem, setSelectedMem] = useState(null);
   const [albumPhotos, setAlbumPhotos] = useState([]);
   const [isViewing, setIsViewing] = useState(false);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    event_date: '',
-    image_files: []
-  });
+  // States cho Form Thêm/Sửa
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({ title: '', content: '', date: '', files: [] });
 
-  const handleOpenAlbum = async (m) => {
-    setSelectedMem(m);
-    setIsViewing(true);
+  useEffect(() => { fetchMemories(); }, []);
+
+  const fetchMemories = async () => {
     try {
-const res = await axios.get(`https://backend-love.onrender.com/api/memories/${m.id}/photos`);      setAlbumPhotos(res.data);
-    } catch (err) { console.error("Lỗi:", err); }
+      const res = await axios.get(API_URL);
+      setMemories(res.data);
+    } catch (err) { console.error("Lỗi lấy danh sách"); }
+    finally { setLoading(false); }
   };
 
-  const handleOpenAdd = () => {
-    setEditingId(null);
-    setFormData({ title: '', content: '', event_date: '', image_files: [] });
-    setShowModal(true);
+  const handleViewAlbum = async (m) => {
+    setSelectedMem(m);
+    setIsViewing(true);
+    setAlbumPhotos([]);
+    try {
+      const res = await axios.get(`${API_URL}/${m.id}/photos`);
+      setAlbumPhotos(res.data);
+    } catch (err) { console.error("Lỗi lấy album ảnh"); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     const data = new FormData();
     data.append('title', formData.title);
     data.append('content', formData.content);
-    data.append('event_date', formData.event_date);
-    formData.image_files.forEach(file => data.append('images', file));
+    data.append('event_date', formData.date);
+    if (formData.files) {
+      Array.from(formData.files).forEach(file => data.append('images', file));
+    }
 
     try {
-      await axios.post('http://localhost:5000/api/memories', data);
-      setShowModal(false);
+      if (editingId) {
+        await axios.put(`${API_URL}/${editingId}`, data);
+        alert("Đã cập nhật kỷ niệm! ✨");
+      } else {
+        await axios.post(API_URL, data);
+        alert("Đã thêm kỷ niệm mới! ❤️");
+      }
+      setEditingId(null);
+      setFormData({ title: '', content: '', date: '', files: [] });
       fetchMemories();
-      alert("Đã ghi lại kỷ niệm! ❤️");
-    } catch (err) { alert("Lỗi lưu trữ!"); } 
-    finally { setIsSubmitting(false); }
+    } catch (err) { alert("Lỗi lưu dữ liệu"); }
+  };
+
+  const handleEdit = (e, m) => {
+    e.stopPropagation(); // Ngăn mở album khi bấm nút sửa
+    setEditingId(m.id);
+    setFormData({ 
+      title: m.title, 
+      content: m.content, 
+      date: m.event_date ? m.event_date.split('T')[0] : '', 
+      files: [] 
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (e, id) => {
-    e.stopPropagation();
-    if (window.confirm("Xóa nhé? 😢")) {
-      await axios.delete(`http://localhost:5000/api/memories/${id}`);
-      fetchMemories();
+    e.stopPropagation(); // Ngăn mở album khi bấm nút xóa
+    if (window.confirm("Bạn có chắc muốn xóa kỷ niệm này? 😢")) {
+      try {
+        await axios.delete(`${API_URL}/${id}`);
+        fetchMemories();
+      } catch (err) { alert("Lỗi khi xóa!"); }
     }
   };
 
   return (
-    <div className="animate-fadeIn pb-20 px-4 md:px-0">
-      {/* --- HEADER --- */}
-      <header className="flex justify-between items-end mb-12">
-        <div>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-800 tracking-tighter">Nhật Ký Tình Yêu</h2>
-          <p className="text-pink-400 font-medium italic text-sm md:text-base">"Mỗi ngày bên nhau là một món quà..."</p>
+    <div className="min-h-screen bg-rose-50/30 py-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        
+        {/* HEADER */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-black text-rose-500 mb-2">Love Journal</h1>
+          <p className="text-gray-500 italic">"Lưu giữ những khoảnh khắc tuyệt vời nhất"</p>
         </div>
-        {user?.role === 'admin' && (
-          <button onClick={handleOpenAdd} className="bg-pink-500 text-white px-5 py-3 rounded-2xl font-bold shadow-lg hover:scale-105 transition-all flex items-center gap-2 text-sm md:text-base">
-            ✍️ Viết kỷ niệm
-          </button>
-        )}
-      </header>
 
-      {/* --- DANH SÁCH KỶ NIỆM --- */}
-      {loading ? (
-        <div className="text-center py-20 text-pink-300 animate-pulse font-bold">Đang lục lại ký ức...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {memories.map((m, index) => (
+        {/* FORM ADMIN - ĐÃ LẮP LẠI ĐẦY ĐỦ */}
+        {user?.role === 'admin' && (
+          <div className="mb-16 bg-white p-8 rounded-[2.5rem] shadow-xl border border-rose-100">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">
+              {editingId ? "✍️ Chỉnh sửa kỷ niệm" : "📸 Thêm kỷ niệm mới"}
+            </h2>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <input 
+                  type="text" placeholder="Tiêu đề kỷ niệm..." required
+                  className="w-full p-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-rose-300 transition-all"
+                  value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
+                />
+                <input 
+                  type="date" required
+                  className="w-full p-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-rose-300 transition-all"
+                  value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
+                />
+                <input 
+                  type="file" multiple
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:bg-rose-50 file:text-rose-600 font-semibold"
+                  onChange={e => setFormData({...formData, files: e.target.files})}
+                />
+              </div>
+              <textarea 
+                placeholder="Câu chuyện của chúng mình hôm đó..." required
+                className="w-full p-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-rose-300 transition-all h-full min-h-[150px]"
+                value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})}
+              />
+              <div className="md:col-span-2 flex gap-4 mt-2">
+                <button type="submit" className="flex-1 bg-rose-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-rose-200 hover:bg-rose-600 transition-all">
+                  {editingId ? "CẬP NHẬT THAY ĐỔI ✨" : "LƯU KỶ NIỆM ❤️"}
+                </button>
+                {editingId && (
+                  <button 
+                    type="button" 
+                    onClick={() => {setEditingId(null); setFormData({title:'', content:'', date:'', files:[]})}}
+                    className="px-8 bg-gray-200 text-gray-600 rounded-2xl font-bold"
+                  >HỦY</button>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* DANH SÁCH CARD */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {memories.map((m) => (
             <div 
               key={m.id} 
-              onClick={() => handleOpenAlbum(m)}
-              className="animate-item bg-white rounded-[2.5rem] p-4 shadow-sm cursor-pointer border-4 border-white relative transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl group"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              onClick={() => handleViewAlbum(m)}
+              className="group bg-white rounded-[2.5rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer relative border-4 border-white"
             >
-              <div className="h-56 rounded-[2rem] overflow-hidden mb-6 relative">
-                <img src={m.cover_image || 'https://via.placeholder.com/400x300'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="bg-white/30 backdrop-blur-md text-white px-5 py-2 rounded-full text-xs font-black shadow-lg">XEM ALBUM ✨</span>
+              <div className="h-60 overflow-hidden">
+                <img src={m.cover_image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+              </div>
+              <div className="p-6">
+                <div className="flex justify-between items-start">
+                   <span className="text-rose-400 text-xs font-bold uppercase">{new Date(m.event_date).toLocaleDateString('vi-VN')}</span>
+                   {/* Nút Sửa/Xóa nhỏ gọn trên Card */}
+                   {user?.role === 'admin' && (
+                     <div className="flex gap-2">
+                       <button onClick={(e) => handleEdit(e, m)} className="text-teal-500 hover:text-teal-700 p-1">Sửa</button>
+                       <button onClick={(e) => handleDelete(e, m.id)} className="text-rose-400 hover:text-rose-600 p-1">Xóa</button>
+                     </div>
+                   )}
                 </div>
+                <h3 className="text-xl font-bold text-gray-800 mt-2 line-clamp-1">{m.title}</h3>
+                <p className="text-gray-400 text-sm mt-2 line-clamp-2 italic">{m.content}</p>
               </div>
-              <div className="px-4 pb-4">
-                <span className="text-pink-400 font-black text-[10px] tracking-widest uppercase bg-pink-50 px-3 py-1 rounded-full">{new Date(m.event_date).toLocaleDateString('vi-VN')}</span>
-                <h4 className="text-xl font-black text-gray-800 mt-3 mb-2 group-hover:text-pink-500 transition-colors">{m.title}</h4>
-                <p className="text-gray-400 text-sm italic line-clamp-2 leading-relaxed">{m.content}</p>
-              </div>
-              {user?.role === 'admin' && (
-                <button onClick={(e) => handleDelete(e, m.id)} className="absolute top-6 right-6 w-8 h-8 bg-white/90 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg">✕</button>
-              )}
             </div>
           ))}
         </div>
-      )}
 
-      {/* --- MODAL XEM ALBUM (Masonry) --- */}
-      {isViewing && selectedMem && (
-        <div className="fixed inset-0 z-[200] bg-white/98 backdrop-blur-2xl overflow-y-auto animate-fadeIn">
-          <button onClick={() => setIsViewing(false)} className="fixed top-6 right-6 md:top-8 md:right-8 w-12 h-12 flex items-center justify-center bg-pink-500 text-white rounded-full shadow-xl z-[201]">✕</button>
-          <div className="max-w-5xl mx-auto py-20 px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-black text-gray-800 mb-4">{selectedMem.title}</h2>
-              <p className="text-pink-500 font-bold mb-8 italic">📅 {new Date(selectedMem.event_date).toLocaleDateString('vi-VN')}</p>
-              <div className="bg-white p-6 md:p-10 rounded-[2.5rem] text-gray-600 text-lg italic leading-relaxed whitespace-pre-wrap shadow-sm border border-pink-50">"{selectedMem.content}"</div>
-            </div>
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
-              {albumPhotos.map((img, idx) => (
-                <div key={img.id} className="animate-item break-inside-avoid rounded-3xl overflow-hidden border-4 border-white shadow-lg" style={{ animationDelay: `${idx * 0.08}s` }}>
-                   <img src={img.photo_url} className="w-full h-auto block" alt="" />
-                </div>
-              ))}
+        {/* --- MODAL XEM ALBUM (Giữ nguyên phần lộng lẫy) --- */}
+        {isViewing && selectedMem && (
+          <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto">
+            <div className="w-full max-w-5xl my-auto py-10">
+              <button onClick={() => setIsViewing(false)} className="fixed top-8 right-8 text-white text-5xl font-light hover:rotate-90 transition-all">✕</button>
+              <div className="text-center mb-12 text-white">
+                <h2 className="text-5xl font-black mb-4">{selectedMem.title}</h2>
+                <p className="text-rose-200 text-lg italic">"{selectedMem.content}"</p>
+              </div>
+              <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6 px-4">
+                {albumPhotos.map((photo) => (
+                  <div key={photo.id} className="break-inside-avoid rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/10">
+                    <img src={photo.photo_url} className="w-full h-auto hover:scale-110 transition-transform duration-500" alt="love" />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* --- MODAL FORM (Chống Tràn Tuyệt Đối) --- */}
-      {showModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
-          <form 
-            onSubmit={handleSubmit} 
-            className="bg-white p-6 md:p-8 rounded-[3rem] w-full max-w-md shadow-2xl border-4 border-pink-50 flex flex-col max-h-[90vh] overflow-hidden animate-scaleIn"
-          >
-            {/* Header Form - Không cuộn */}
-            <h3 className="text-2xl font-black text-gray-800 mb-6 text-center uppercase tracking-tighter shrink-0">⚓ Ghi Lại Kỷ Niệm</h3>
-            
-            {/* Body Form - Có thể cuộn nếu quá dài */}
-            <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-grow">
-              <div>
-                <label className="text-[10px] font-bold text-pink-400 ml-4 uppercase">Tiêu đề</label>
-                <input type="text" placeholder="Kỷ niệm ngày..." required className="w-full p-4 rounded-2xl bg-pink-50/20 border-2 border-transparent focus:border-pink-200 outline-none transition-all" onChange={e => setFormData({...formData, title: e.target.value})} />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-pink-400 ml-4 uppercase">Nội dung</label>
-                <textarea placeholder="Chuyện gì đã xảy ra..." required className="w-full p-4 rounded-2xl bg-pink-50/20 border-2 border-transparent focus:border-pink-200 outline-none transition-all h-24 resize-none" onChange={e => setFormData({...formData, content: e.target.value})} />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-pink-400 ml-4 uppercase">Ngày tháng</label>
-                <input type="date" required className="w-full p-4 rounded-2xl bg-pink-50/20 border-2 border-transparent focus:border-pink-200 outline-none transition-all" onChange={e => setFormData({...formData, event_date: e.target.value})} />
-              </div>
-              <div className="p-6 border-2 border-dashed border-pink-100 rounded-[2rem] text-center hover:bg-pink-50 transition-all cursor-pointer relative">
-                <input type="file" multiple accept="image/*" className="hidden" id="file-upload" onChange={e => setFormData({...formData, image_files: Array.from(e.target.files)})} />
-                <label htmlFor="file-upload" className="cursor-pointer block">
-                  <span className="text-2xl block mb-1">📸</span>
-                  <span className="text-pink-500 font-black text-[10px] uppercase block">
-                    {formData.image_files.length > 0 ? `Đã chọn ${formData.image_files.length} ảnh` : "Tải lên album ảnh"}
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Footer Form - Không cuộn */}
-            <div className="flex gap-4 mt-6 shrink-0">
-              <button type="button" onClick={() => setShowModal(false)} className="flex-1 font-bold text-gray-400 py-3">Hủy</button>
-              <button type="submit" disabled={isSubmitting} className="flex-1 py-4 bg-pink-500 text-white rounded-2xl font-black shadow-xl disabled:opacity-50">
-                {isSubmitting ? 'ĐANG LƯU...' : 'LƯU LẠI ❤️'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -13,7 +13,7 @@ function Places({ user }) {
 
   const fetchPlaces = async () => {
     try {
-      const res = await axios.get('https://backend-love.onrender.com/api/places');
+      const res = await axios.get('http://localhost:5000/api/places');
       // Sắp xếp theo thời gian tăng dần cho đúng lộ trình map
       const sorted = res.data.sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
       setPlaces(sorted);
