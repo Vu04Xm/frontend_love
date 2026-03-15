@@ -239,7 +239,7 @@ function Memories({ user }) {
               <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8 px-4">
                 {albumPhotos.map((photo) => (
                   <div key={photo.id} className="break-inside-avoid rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white animate-popIn">
-                    <img src={photo.image_url} className="w-full h-auto hover:scale-105 transition-transform duration-700" alt="love" />
+                    <img src={photo.photo_url} className="w-full h-auto hover:scale-105 transition-transform duration-700" alt="love" />
                   </div>
                 ))}
               </div>
