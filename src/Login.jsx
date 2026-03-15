@@ -27,8 +27,8 @@ function Login({ onLoginSuccess }) {
     const password = e.target.password.value;
     try {
       // 2. Gọi API đăng nhập thông qua instance api
-      const res = await api.post('/api/login', { username, password });
-      if (res.data.success) { 
+// Tìm dòng này trong hàm handleLogin
+const res = await api.post('/api/auth/login', { username, password });      if (res.data.success) { 
         onLoginSuccess(res.data.user); 
       }
     } catch (err) {
