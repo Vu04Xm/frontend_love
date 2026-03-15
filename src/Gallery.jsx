@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import api from './api'; // 1. Import cấu hình api dùng chung
+import api from './api';
 
 function Gallery({ user }) {
   const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(null);
-  
-  // State cho Form thêm ảnh mới
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [newPhoto, setNewPhoto] = useState({ file: null, caption: '', date: '' });
 
   const fetchPhotos = async () => {
     try {
-      // 2. Sử dụng api.get thay cho axios.get(localhost)
       const res = await api.get('/api/photos');
       setPhotos(res.data);
     } catch (err) { console.error("Lỗi lấy ảnh:", err); }
@@ -26,17 +23,13 @@ function Gallery({ user }) {
     return date.toLocaleDateString('vi-VN', { 
       day: '2-digit', 
       month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     });
   };
 
-  // --- 1. THÊM ẢNH (CREATE) ---
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!newPhoto.file) return alert("Vui lòng chọn ảnh!");
-
     setUploading(true);
     const data = new FormData();
     data.append('image', newPhoto.file);
@@ -44,99 +37,91 @@ function Gallery({ user }) {
     if (newPhoto.date) data.append('custom_date', newPhoto.date);
 
     try {
-      // 3. Sử dụng api.post
       await api.post('/api/photos', data);
       setShowUploadForm(false);
       setNewPhoto({ file: null, caption: '', date: '' });
       fetchPhotos();
-    } catch (err) {
-      alert("Lỗi upload ảnh.");
-    } finally {
-      setUploading(false);
-    }
+    } catch (err) { alert("Lỗi upload ảnh."); } 
+    finally { setUploading(false); }
   };
 
-  // --- 2. XÓA ẢNH (DELETE) ---
   const handleDelete = async (e, id) => {
     e.stopPropagation();
-    if (!window.confirm("Bạn có chắc chắn muốn xóa kỷ niệm này vĩnh viễn không?")) return;
+    if (!window.confirm("Xóa vĩnh viễn ảnh này?")) return;
     try {
-      // 4. Sử dụng api.delete
       await api.delete(`/api/photos/${id}`);
       fetchPhotos();
       if (currentIndex !== null) setCurrentIndex(null);
     } catch (err) { alert("Lỗi khi xóa ảnh."); }
   };
 
-  // --- 3. SỬA CHÚ THÍCH (UPDATE) ---
   const handleEditCaption = async (e, photo) => {
     e.stopPropagation();
-    const newCaption = prompt("Sửa lời nhắn cho ảnh này:", photo.caption);
+    const newCaption = prompt("Sửa lời nhắn:", photo.caption);
     if (newCaption === null || newCaption === photo.caption) return;
     try {
-      // 5. Sử dụng api.put
       await api.put(`/api/photos/${photo.id}`, { caption: newCaption });
       fetchPhotos();
     } catch (err) { alert("Lỗi khi cập nhật."); }
   };
 
   return (
-    <div className="p-4 animate-fadeIn">
-      <div className="mb-10 text-center">
-        <h2 className="text-4xl font-black text-gray-800 mb-2 tracking-tighter">Album Ảnh 📸</h2>
-        <p className="text-pink-400 font-medium italic">"Lưu giữ từng giây phút bên nhau"</p>
+    <div className="p-2 md:p-4 animate-fadeIn">
+      <div className="mb-6 md:mb-10 text-center">
+        <h2 className="text-3xl md:text-4xl font-black text-gray-800 mb-2 tracking-tighter">Album Ảnh 📸</h2>
+        <p className="text-pink-400 font-medium italic text-sm md:text-base">"Lưu giữ từng giây phút bên nhau"</p>
       </div>
 
-      {/* NÚT THÊM (Chỉ Admin) */}
+      {/* NÚT THÊM (Responsive button) */}
       {user?.role === 'admin' && (
-        <div className="mb-12 flex justify-center">
+        <div className="mb-8 flex justify-center">
           <button 
             onClick={() => setShowUploadForm(true)}
-            className="px-8 py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-bold rounded-[2rem] shadow-lg hover:shadow-pink-200 transition-all hover:-translate-y-1"
+            className="w-full max-w-xs md:max-w-none md:w-auto px-6 py-3 md:px-8 md:py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-bold rounded-2xl md:rounded-[2rem] shadow-lg hover:shadow-pink-200 transition-all active:scale-95"
           >
-            ➕ Thêm khoảnh khắc mới
+            ➕ Thêm khoảnh khắc
           </button>
         </div>
       )}
 
-      {/* MODAL FORM THÊM ẢNH */}
+      {/* MODAL FORM THÊM ẢNH (Tối ưu Mobile) */}
       {showUploadForm && (
-        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4">
           <form 
             onSubmit={handleFormSubmit}
-            className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-popIn border-4 border-pink-50"
+            className="bg-white w-full md:max-w-md rounded-t-[2rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-2xl animate-popIn border-t-4 md:border-4 border-pink-50"
           >
-            <h3 className="text-2xl font-black text-gray-800 mb-6 text-center">Tải lên kỷ niệm ✨</h3>
-            <div className="space-y-4 text-left">
+            <h3 className="text-xl md:text-2xl font-black text-gray-800 mb-6 text-center">Tải lên kỷ niệm ✨</h3>
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-2 ml-2">1. Chọn ảnh từ máy</label>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Chọn ảnh</label>
                 <input 
                   type="file" accept="image/*"
                   onChange={(e) => setNewPhoto({...newPhoto, file: e.target.files[0]})}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer"
+                  className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-pink-50 file:text-pink-700"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-2 ml-2">2. Lời nhắn (Caption)</label>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Lời nhắn</label>
                 <input 
                   type="text" placeholder="Ví dụ: Ngày đầu gặp nhau..."
                   value={newPhoto.caption}
                   onChange={(e) => setNewPhoto({...newPhoto, caption: e.target.value})}
-                  className="w-full px-5 py-3 rounded-2xl border border-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-pink-100 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-2 ml-2">3. Ngày chụp (Nếu muốn lùi ngày)</label>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Ngày chụp</label>
                 <input 
                   type="date" value={newPhoto.date}
                   onChange={(e) => setNewPhoto({...newPhoto, date: e.target.value})}
-                  className="w-full px-5 py-3 rounded-2xl border border-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all cursor-pointer"
+                  className="w-full px-4 py-3 rounded-xl border border-pink-100 focus:ring-2 focus:ring-pink-300 outline-none text-sm"
                 />
               </div>
             </div>
-            <div className="mt-8 flex gap-3">
-              <button type="button" onClick={() => setShowUploadForm(false)} className="flex-1 py-4 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-colors">Hủy</button>
-              <button type="submit" disabled={uploading} className="flex-1 py-4 bg-pink-500 text-white rounded-2xl font-bold shadow-lg shadow-pink-200 hover:bg-pink-600 disabled:bg-gray-300 transition-all">
+            <div className="mt-8 flex gap-3 pb-4 md:pb-0">
+              <button type="button" onClick={() => setShowUploadForm(false)} className="flex-1 py-3 font-bold text-gray-400">Hủy</button>
+              <button type="submit" disabled={uploading} className="flex-[2] py-3 bg-pink-500 text-white rounded-xl font-bold shadow-lg">
                 {uploading ? "Đang gửi..." : "Lưu ngay"}
               </button>
             </div>
@@ -144,51 +129,52 @@ function Gallery({ user }) {
         </div>
       )}
 
-      {/* GRID ẢNH */}
-      <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+      {/* GRID ẢNH (Masonry Responsive) */}
+      <div className="columns-2 sm:columns-3 lg:columns-4 gap-2 md:gap-4 space-y-2 md:space-y-4">
         {photos.map((p, index) => (
           <div 
             key={p.id} 
             onClick={() => setCurrentIndex(index)}
-            className="relative group rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all border-4 border-white cursor-pointer"
+            className="relative group rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all border-2 md:border-4 border-white cursor-pointer break-inside-avoid"
           >
-            <img src={p.image_url} alt="" className="w-full h-auto block transform group-hover:scale-105 transition-transform duration-700" />
+            <img src={p.image_url} alt="" className="w-full h-auto block transform group-hover:scale-105 transition-transform duration-700" loading="lazy" />
             
+            {/* Control buttons (Mobile: Luôn hiện nhẹ, Desktop: Hover hiện) */}
             {user?.role === 'admin' && (
-              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                <button onClick={(e) => handleEditCaption(e, p)} className="bg-white/90 p-2 rounded-full text-blue-500 hover:bg-white shadow-md">✏️</button>
-                <button onClick={(e) => handleDelete(e, p.id)} className="bg-white/90 p-2 rounded-full text-red-500 hover:bg-white shadow-md">🗑️</button>
+              <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <button onClick={(e) => handleEditCaption(e, p)} className="bg-white/90 p-1.5 md:p-2 rounded-full text-blue-500 shadow-md text-xs md:text-base">✏️</button>
+                <button onClick={(e) => handleDelete(e, p.id)} className="bg-white/90 p-1.5 md:p-2 rounded-full text-red-500 shadow-md text-xs md:text-base">🗑️</button>
               </div>
             )}
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6">
-               <p className="text-white text-sm font-bold mb-1 line-clamp-2 italic">"{p.caption}"</p>
-               <p className="text-white/60 text-[10px] tracking-widest uppercase">{formatDate(p.created_at)}</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 md:p-6">
+               <p className="text-white text-[10px] md:text-sm font-bold mb-1 line-clamp-2 italic">"{p.caption}"</p>
+               <p className="text-white/60 text-[8px] md:text-[10px] tracking-widest uppercase">{formatDate(p.created_at)}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* MODAL PHÓNG TO */}
+      {/* MODAL PHÓNG TO (Responsive) */}
       {currentIndex !== null && (
-        <div className="fixed inset-0 z-[999] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn" onClick={() => setCurrentIndex(null)}>
-          <button className="absolute top-8 right-8 text-white/50 hover:text-white text-4xl transition-colors" onClick={() => setCurrentIndex(null)}>&times;</button>
+        <div className="fixed inset-0 z-[999] bg-black/95 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-fadeIn" onClick={() => setCurrentIndex(null)}>
+          <button className="absolute top-4 right-4 md:top-8 md:right-8 text-white/50 text-3xl" onClick={() => setCurrentIndex(null)}>&times;</button>
           
           <div className="relative max-w-5xl w-full flex flex-col items-center">
             <img 
               src={photos[currentIndex].image_url} 
-              className="max-w-full max-h-[75vh] rounded-3xl shadow-2xl animate-zoomIn object-contain border-4 border-white/10" 
+              className="max-w-full max-h-[65vh] md:max-h-[75vh] rounded-2xl md:rounded-3xl shadow-2xl animate-zoomIn object-contain" 
               onClick={(e) => e.stopPropagation()} 
             />
             
-            <div className="mt-8 bg-white/10 backdrop-blur-xl px-10 py-5 rounded-[3rem] border border-white/20 text-center animate-slideUp shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-              <p className="text-white text-xl md:text-2xl font-black italic tracking-tight">"{photos[currentIndex].caption}"</p>
-              <p className="text-pink-300 text-xs mt-3 font-bold uppercase tracking-[0.2em]">📅 {formatDate(photos[currentIndex].created_at)}</p>
+            <div className="mt-4 md:mt-8 bg-white/10 backdrop-blur-md px-6 py-4 md:px-10 md:py-5 rounded-2xl md:rounded-[3rem] border border-white/20 text-center w-[90%] md:w-auto" onClick={(e) => e.stopPropagation()}>
+              <p className="text-white text-lg md:text-2xl font-black italic tracking-tight">"{photos[currentIndex].caption}"</p>
+              <p className="text-pink-300 text-[10px] md:text-xs mt-2 font-bold uppercase tracking-widest">📅 {formatDate(photos[currentIndex].created_at)}</p>
               
               {user?.role === 'admin' && (
-                <div className="mt-4 flex justify-center gap-4">
-                  <button onClick={(e) => handleEditCaption(e, photos[currentIndex])} className="text-[10px] text-blue-300 hover:text-white underline tracking-widest uppercase">Chỉnh sửa lời nhắn</button>
-                  <button onClick={(e) => handleDelete(e, photos[currentIndex].id)} className="text-[10px] text-red-400 hover:text-white underline tracking-widest uppercase">Xóa kỷ niệm</button>
+                <div className="mt-4 flex justify-center gap-4 border-t border-white/10 pt-4">
+                  <button onClick={(e) => handleEditCaption(e, photos[currentIndex])} className="text-[10px] text-blue-300 uppercase">Sửa</button>
+                  <button onClick={(e) => handleDelete(e, photos[currentIndex].id)} className="text-[10px] text-red-400 uppercase">Xóa</button>
                 </div>
               )}
             </div>
@@ -197,10 +183,9 @@ function Gallery({ user }) {
       )}
 
       <style>{`
-        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes slideUp { 0% { transform: translateY(30px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        .animate-popIn { animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-slideUp { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .break-inside-avoid { break-inside: avoid; }
+        @keyframes popIn { 0% { transform: scale(0.9) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+        .animate-popIn { animation: popIn 0.3s ease-out forwards; }
       `}</style>
     </div>
   );
