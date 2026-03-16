@@ -36,7 +36,7 @@ const HeartOverlay = () => {
     setLoading(true);
     try {
       // Gọi API lấy ảnh ngẫu nhiên từ backend của bạn
-      const res = await axios.get('http://localhost:5000/api/photos/random');
+      const res = await axios.get('/api/memories/random');
       if (res.data && res.data.image_url) {
         setSelectedImg(res.data.image_url);
       }
