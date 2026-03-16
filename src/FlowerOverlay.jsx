@@ -36,7 +36,9 @@ const HeartOverlay = () => {
     setLoading(true);
     try {
       // Gọi API lấy ảnh ngẫu nhiên từ backend của bạn
-      const res = await axios.get('/api/memories/random');
+   const res = await axios.get(
+  "https://backend-love.onrender.com/api/memories/random"
+);
       if (res.data && res.data.image_url) {
         setSelectedImg(res.data.image_url);
       }
