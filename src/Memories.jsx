@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from './api'; 
 
+// Hàm tối ưu ảnh Cloudinary - Giúp tiết kiệm băng thông tối đa cho Aiven & Cloudinary
+const optimizeUrl = (url, transform = 'f_auto,q_auto') => {
+  if (!url) return 'https://via.placeholder.com/400x300?text=Love';
+  if (!url.includes('cloudinary.com')) return url;
+  return url.replace('/upload/', `/upload/${transform}/`);
+};
+
 function Memories({ user }) {
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +126,7 @@ function Memories({ user }) {
                   value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
                 />
                 <div className="relative">
-                  <label className="block text-[10px] text-rose-400 font-bold mb-1 ml-2 uppercase">Thêm ảnh vào album</label>
+                  <label className="block text-[10px] text-rose-400 font-bold mb-1 ml-2 uppercase">Thêm ảnh vào album (Tối đa 10MB/file)</label>
                   <input 
                     type="file" multiple accept="image/*"
                     className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-rose-500 file:text-white"
@@ -152,7 +159,13 @@ function Memories({ user }) {
             {memories.map((m) => (
               <div key={m.id} onClick={() => handleViewAlbum(m)} className="group bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all cursor-pointer border-2 border-white">
                 <div className="h-48 md:h-60 overflow-hidden relative">
-                  <img src={m.cover_image || 'https://via.placeholder.com/400x300?text=Love'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+                  {/* Thumbnail tối ưu: w_600 */}
+                  <img 
+                    src={optimizeUrl(m.cover_image, 'w_600,c_fill,g_auto,f_auto,q_auto')} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                    alt={m.title} 
+                    loading="lazy"
+                  />
                   <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
                      <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter">
                         {new Date(m.event_date).toLocaleDateString('vi-VN')}
@@ -164,8 +177,8 @@ function Memories({ user }) {
                     <h3 className="text-lg md:text-xl font-black text-gray-800 line-clamp-1 flex-1">{m.title}</h3>
                     {user?.role === 'admin' && (
                       <div className="flex gap-1 ml-2">
-                        <button onClick={(e) => handleEdit(e, m)} className="p-2 bg-teal-50 text-teal-600 rounded-full text-xs">✏️</button>
-                        <button onClick={(e) => handleDelete(e, m.id)} className="p-2 bg-rose-50 text-rose-600 rounded-full text-xs">🗑️</button>
+                        <button onClick={(e) => handleEdit(e, m)} className="p-2 bg-teal-50 text-teal-600 rounded-full text-xs hover:bg-teal-500 hover:text-white transition-colors">✏️</button>
+                        <button onClick={(e) => handleDelete(e, m.id)} className="p-2 bg-rose-50 text-rose-600 rounded-full text-xs hover:bg-rose-500 hover:text-white transition-colors">🗑️</button>
                       </div>
                     )}
                   </div>
@@ -182,7 +195,7 @@ function Memories({ user }) {
             {/* Nút đóng */}
             <button 
                 onClick={() => setIsViewing(false)} 
-                className="fixed top-4 right-4 z-[110] bg-rose-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 md:bg-transparent md:text-rose-500 md:text-4xl"
+                className="fixed top-4 right-4 z-[110] bg-rose-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 hover:bg-rose-600 transition-colors md:text-2xl"
             >✕</button>
             
             <div className="w-full max-w-5xl mx-auto py-10 px-4 md:px-6">
@@ -194,7 +207,7 @@ function Memories({ user }) {
                 </div>
               </div>
 
-              {/* Lưới ảnh thông minh: Tự động dàn đều cho 1, 2, 3, 4+ ảnh */}
+              {/* Lưới ảnh thông minh */}
               <div className={`grid gap-3 md:gap-4 ${
                 albumPhotos.length === 1 ? 'grid-cols-1' : 
                 albumPhotos.length === 2 ? 'grid-cols-2' : 
@@ -211,16 +224,17 @@ function Memories({ user }) {
                     `}
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
+                    {/* Ảnh trong album: w_1200 để nét nhưng vẫn nén q_auto */}
                     <img 
-                        src={photo.photo_url} 
+                        src={optimizeUrl(photo.photo_url, 'w_1200,c_limit,f_auto,q_auto')} 
                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-zoom-in" 
-                        alt="love" 
+                        alt="love-moment" 
                         loading="lazy" 
                         onClick={() => window.open(photo.photo_url, '_blank')}
                     />
                   </div>
                 )) : (
-                   <div className="col-span-full text-center py-20 text-gray-300 italic">Album hiện chưa có ảnh...</div>
+                   <div className="col-span-full text-center py-20 text-gray-300 italic font-medium">Album hiện chưa có ảnh nào...</div>
                 )}
               </div>
             </div>
@@ -234,6 +248,9 @@ function Memories({ user }) {
         .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
         .animate-popIn { animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .photo-grid-card { overflow: hidden; position: relative; background: #fdf2f2; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #fffcfc; }
+        ::-webkit-scrollbar-thumb { background: #fecaca; border-radius: 10px; }
       `}</style>
     </div>
   );
