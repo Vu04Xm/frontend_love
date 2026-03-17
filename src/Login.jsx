@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import api from './api'; // 1. Sử dụng api instance đã cấu hình thay vì axios thuần
+import api from './api';
 
 function Login({ onLoginSuccess }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
   const audioRef = useRef(null);
 
-  // Tạo mảng ngẫu nhiên cho hoa và tim rơi
+  // Tạo hiệu ứng tim và hoa bay bổng
   const floatingItems = Array.from({ length: 25 }).map((_, i) => ({
     id: i,
     left: `${Math.random() * 100}%`,
@@ -25,22 +26,33 @@ function Login({ onLoginSuccess }) {
     e.preventDefault();
     const username = e.target.username.value;
     const password = e.target.password.value;
+    
+    setLoading(true);
     try {
-      // 2. Gọi API đăng nhập thông qua instance api
-// Tìm dòng này trong hàm handleLogin
-const res = await api.post('/api/auth/login', { username, password });      if (res.data.success) { 
+      // Gọi API đăng nhập
+      const res = await api.post('/api/auth/login', { username, password });
+      
+      if (res.data.success) { 
+        // ✅ DÙNG sessionStorage: 
+        // - F5 (Refresh): Dữ liệu vẫn còn -> Trải nghiệm mượt.
+        // - Đóng Tab/Trình duyệt: Dữ liệu mất sạch -> Phải đăng nhập lại.
+        sessionStorage.setItem('user_session', JSON.stringify(res.data.user));
+        
+        // Thông báo cho App.js cập nhật State
         onLoginSuccess(res.data.user); 
       }
     } catch (err) {
-      // Hiển thị thông báo lỗi từ Backend hoặc thông báo mặc định
-      alert(err.response?.data?.message || "Đăng nhập thất bại!");
+      // Hiển thị lỗi từ Backend hoặc thông báo mặc định
+      alert(err.response?.data?.error || "Sai mật khẩu hoặc tài khoản rồi người ơi! 🥺");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-100 via-pink-200 to-red-200 flex items-center justify-center p-4 relative overflow-hidden">
       
-      {/* HIỆU ỨNG TRÁI TIM & HOA RƠI */}
+      {/* BACKGROUND ELEMENTS */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {floatingItems.map((item) => (
           <span
@@ -59,12 +71,12 @@ const res = await api.post('/api/auth/login', { username, password });      if (
         ))}
       </div>
 
-      {/* Trình phát nhạc ẩn */}
+      {/* MUSIC PLAYER */}
       <audio ref={audioRef} src="/motdoi.mp3" loop />
 
-      <div className="bg-white/70 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-[0_20px_60px_rgba(255,117,143,0.4)] w-full max-w-md border border-white/40 relative z-10 text-center">
+      <div className="bg-white/70 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-[0_20px_60px_rgba(255,117,143,0.4)] w-full max-w-md border border-white/40 relative z-10 text-center animate-fadeIn">
         
-        {/* Nút bật/tắt nhạc */}
+        {/* MUSIC BUTTON */}
         <button 
           onClick={toggleMusic}
           type="button"
@@ -80,7 +92,7 @@ const res = await api.post('/api/auth/login', { username, password });      if (
           <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-rose-500 font-serif">
             Love Box
           </h2>
-          <p className="text-pink-400 font-medium italic mt-2 text-sm uppercase tracking-widest">
+          <p className="text-pink-400 font-bold italic mt-2 text-xs uppercase tracking-[0.2em]">
             Together Forever
           </p>
         </div>
@@ -92,7 +104,7 @@ const res = await api.post('/api/auth/login', { username, password });      if (
               type="text" 
               placeholder="Tên đăng nhập" 
               required 
-              className="w-full p-4 bg-white/60 border-2 border-pink-100 rounded-2xl focus:border-pink-400 focus:ring-4 focus:ring-pink-100 outline-none transition-all placeholder:text-pink-300 shadow-sm"
+              className="w-full p-4 bg-white/60 border-2 border-pink-100 rounded-2xl focus:border-pink-400 focus:ring-4 focus:ring-pink-100 outline-none transition-all placeholder:text-pink-300 font-bold"
             />
           </div>
           
@@ -100,23 +112,24 @@ const res = await api.post('/api/auth/login', { username, password });      if (
             <input 
               name="password" 
               type="password" 
-              placeholder="Mật khẩu của chúng mình" 
+              placeholder="Mật khẩu bí mật" 
               required 
-              className="w-full p-4 bg-white/60 border-2 border-pink-100 rounded-2xl focus:border-pink-400 focus:ring-4 focus:ring-pink-100 outline-none transition-all placeholder:text-pink-300 shadow-sm"
+              className="w-full p-4 bg-white/60 border-2 border-pink-100 rounded-2xl focus:border-pink-400 focus:ring-4 focus:ring-pink-100 outline-none transition-all placeholder:text-pink-300 font-bold"
             />
           </div>
 
           <button 
             type="submit" 
-            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-4 rounded-2xl font-bold text-lg hover:shadow-pink-300 shadow-lg transform hover:-translate-y-1 transition-all duration-300 active:scale-95"
+            disabled={loading}
+            className={`w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-4 rounded-2xl font-black text-lg shadow-lg transform transition-all duration-300 active:scale-95 ${loading ? 'opacity-70' : 'hover:-translate-y-1 hover:shadow-pink-300'}`}
           >
-            Đăng nhập ngay ❤️
+            {loading ? "ĐANG VÀO NHÀ... ❤️" : "ĐĂNG NHẬP NGAY ❤️"}
           </button>
         </form>
 
-        <p className="mt-8 text-xs text-pink-300 flex justify-center items-center gap-2">
+        <p className="mt-8 text-[10px] text-pink-300 flex justify-center items-center gap-2 uppercase font-black tracking-widest">
           <span className="h-px w-8 bg-pink-200"></span>
-          Được làm bằng cả trái tim
+          Handmade with Love
           <span className="h-px w-8 bg-pink-200"></span>
         </p>
       </div>
@@ -136,6 +149,13 @@ const res = await api.post('/api/auth/login', { username, password });      if (
         }
         .animate-spin-slow {
           animation: spin 6s linear infinite;
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.8s ease-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes spin {
           from { transform: rotate(0deg); }
