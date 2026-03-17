@@ -100,7 +100,7 @@ function Memories({ user }) {
           <p className="text-gray-500 italic text-sm md:text-base px-4">"Nơi cất giữ những mảnh ghép hạnh phúc của chúng mình"</p>
         </div>
 
-        {/* FORM CHO ADMIN (Responsive) */}
+        {/* FORM CHO ADMIN */}
         {user?.role === 'admin' && (
           <div className="mb-10 md:mb-16 bg-white p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] shadow-xl border-2 md:border-4 border-rose-50 animate-popIn">
             <h2 className="text-lg md:text-2xl font-black mb-6 text-gray-800 flex items-center gap-2">
@@ -144,7 +144,7 @@ function Memories({ user }) {
           </div>
         )}
 
-        {/* DANH SÁCH KỶ NIỆM (Responsive Grid) */}
+        {/* DANH SÁCH KỶ NIỆM */}
         {loading ? (
           <div className="text-center py-20 text-rose-400 font-bold animate-pulse text-sm">Đang lật mở trang nhật ký...</div>
         ) : (
@@ -176,29 +176,51 @@ function Memories({ user }) {
           </div>
         )}
 
-        {/* MODAL ALBUM (Tối ưu Fullscreen Mobile) */}
+        {/* MODAL ALBUM (Tối ưu Hiển thị ảnh) */}
         {isViewing && selectedMem && (
-          <div className="fixed inset-0 z-[100] bg-white md:bg-white/98 backdrop-blur-xl flex flex-col p-4 md:p-6 overflow-y-auto animate-fadeIn">
-            {/* Nút đóng nổi bật trên mobile */}
-            <button onClick={() => setIsViewing(false)} className="fixed top-4 right-4 bg-rose-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all z-[110] active:scale-90 md:bg-transparent md:text-rose-500 md:text-4xl md:shadow-none">✕</button>
+          <div className="fixed inset-0 z-[100] bg-white/98 backdrop-blur-xl flex flex-col overflow-y-auto animate-fadeIn">
+            {/* Nút đóng */}
+            <button 
+                onClick={() => setIsViewing(false)} 
+                className="fixed top-4 right-4 z-[110] bg-rose-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 md:bg-transparent md:text-rose-500 md:text-4xl"
+            >✕</button>
             
-            <div className="w-full max-w-5xl mx-auto py-8 md:py-10">
-              <div className="text-center mb-8 md:mb-12 px-4">
-                <h2 className="text-2xl md:text-4xl font-black text-gray-800 mb-3 uppercase tracking-tighter leading-tight">{selectedMem.title}</h2>
-                <p className="text-rose-400 italic text-sm md:text-lg">"{selectedMem.content}"</p>
-                <div className="mt-4 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                   📅 {new Date(selectedMem.event_date).toLocaleDateString('vi-VN')}
+            <div className="w-full max-w-5xl mx-auto py-10 px-4 md:px-6">
+              <div className="text-center mb-10">
+                <h2 className="text-2xl md:text-4xl font-black text-gray-800 mb-3 uppercase tracking-tighter">{selectedMem.title}</h2>
+                <p className="text-rose-400 italic text-sm md:text-lg mb-4">"{selectedMem.content}"</p>
+                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">
+                    📅 {new Date(selectedMem.event_date).toLocaleDateString('vi-VN')}
                 </div>
               </div>
 
-              {/* Grid ảnh Album Masonry */}
-              <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4 px-2">
-                {albumPhotos.length > 0 ? albumPhotos.map((photo) => (
-                  <div key={photo.id} className="break-inside-avoid rounded-2xl md:rounded-3xl overflow-hidden shadow-lg border-2 md:border-4 border-white animate-popIn">
-                    <img src={photo.photo_url} className="w-full h-auto block" alt="love" loading="lazy" />
+              {/* Lưới ảnh thông minh: Tự động dàn đều cho 1, 2, 3, 4+ ảnh */}
+              <div className={`grid gap-3 md:gap-4 ${
+                albumPhotos.length === 1 ? 'grid-cols-1' : 
+                albumPhotos.length === 2 ? 'grid-cols-2' : 
+                albumPhotos.length === 3 ? 'grid-cols-2 md:grid-cols-3' : 
+                'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+              }`}>
+                {albumPhotos.length > 0 ? albumPhotos.map((photo, index) => (
+                  <div 
+                    key={photo.id} 
+                    className={`
+                        photo-grid-card shadow-sm border-2 md:border-4 border-white animate-popIn
+                        ${albumPhotos.length === 3 && index === 0 ? 'md:col-span-2 md:row-span-2 aspect-square md:aspect-auto' : 'aspect-square'}
+                        ${albumPhotos.length === 1 ? 'aspect-auto max-w-2xl mx-auto rounded-3xl' : 'rounded-2xl md:rounded-3xl'}
+                    `}
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    <img 
+                        src={photo.photo_url} 
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-zoom-in" 
+                        alt="love" 
+                        loading="lazy" 
+                        onClick={() => window.open(photo.photo_url, '_blank')}
+                    />
                   </div>
                 )) : (
-                   <div className="col-span-full text-center py-10 text-gray-300 italic">Album hiện chưa có ảnh...</div>
+                   <div className="col-span-full text-center py-20 text-gray-300 italic">Album hiện chưa có ảnh...</div>
                 )}
               </div>
             </div>
@@ -211,7 +233,7 @@ function Memories({ user }) {
         @keyframes popIn { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
         .animate-popIn { animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .break-inside-avoid { break-inside: avoid; }
+        .photo-grid-card { overflow: hidden; position: relative; background: #fdf2f2; }
       `}</style>
     </div>
   );
